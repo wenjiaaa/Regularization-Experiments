@@ -1,0 +1,278 @@
+
+%!TEX program=pdflatex
+
+\documentclass[12pt]{article}
+%package===============================================
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathrsfs}
+\usepackage{mathrsfs}%花体字母
+\geometry{left=2cm, right=2cm, top=2cm, bottom=2cm}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{float}
+\usepackage[colorlinks,linkcolor=blue,CJKbookmarks=true]{hyperref}
+\usepackage{longtable}%长表格自动分页
+\setlength{\extrarowheight}{1.5pt}
+\usepackage{array}
+\usepackage[CJKbookmarks=true,colorlinks]{hyperref}%超链接
+\usepackage[table]{xcolor}%表格背景颜色
+\usepackage{ctex}%支持中文
+\usepackage{cite}
+\usepackage{algorithm}
+\usepackage{algorithmicx}
+\usepackage{algpseudocode}
+\usepackage{amsmath}
+%\usepackage[utf8]{ctex}
+\usepackage{url}%输入网址
+%\usepackage[utf8]{inputenc}
+%伪代码所用的包
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{amsmath}
+\renewcommand{\algorithmicrequire}{\textbf{Input:}}  % Use Input in the format of Algorithm
+\renewcommand{\algorithmicensure}{\textbf{Output:}} % Use Output in the format of Algorithm
+
+\usepackage{xcolor}
+%code======================
+\usepackage{listings}
+\usepackage{setspace}
+\usepackage{geometry}
+\usepackage{algpseudocode}
+
+
+\begin{document}
+\renewcommand\tablename{表}
+\renewcommand\figurename{图}
+\renewcommand\abstractname{摘要}
+\renewcommand\contentsname{目录}
+
+%封面
+\begin{titlepage}
+\newcommand{\HRule}{\rule{\linewidth}{0.5mm}} % Defines a new command for the horizontal lines, change thickness here
+\centering
+\ \\[5cm]
+
+\HRule \\[0.4cm]
+{ \huge \bfseries 《深度学习》}\\[1.0cm] % Title of your document
+{ \Large \bfseries 神经网络中的正则化方法}\\[0.4cm]
+\HRule \\[4cm]
+
+%\Large   卓梁雨（1701214253）\\
+%\Large  孙\ \ \ 科（1701214259）\\
+\Large   孔文佳 \\
+
+
+  % after \\: \hline or \cline{col1-col2} \cline{col3-col4} ...
+ % \Large 组号: \quad \Large No.07 \\ [0.3cm]
+
+
+\\[4cm]
+
+{\LARGE \today}\\ % Date, change the \today to a set date if you want to be precise
+
+\vfill % Fill the rest of the page with whitespace
+
+\end{titlepage}
+
+
+
+
+
+\newpage
+\tableofcontents
+\newpage
+\section{神经网络中的正则化方法}
+本节主要分析了神经网络的Batch Normalization以及Dropout正则化，并与L1,L2正则化进行了对比。进行相关实验，分析这几种方法对模型结果的影响。
+
+\subsection{Dropout}
+\subsubsection{模型描述}
+过拟合现象是一些复杂神经网络模型存在的一个非常严重的问题，Dropout是由Hinton等人\cite{article1}\cite{article2}提出的一种防止过拟合的方法，该方法的核心思想是在神经网络的训练阶段以一定的比例随机将某些神经元置为0，这样可以提高网络的泛化能力， 如图（\ref{dropnet}）所示，左图是一个含有两个隐含层的全连接网络，右图是实施了Dropout之后的稀疏网络。
+\begin{figure}[H]
+  \centering
+  % Requires \usepackage{graphicx}
+  \includegraphics[width = 10cm]{dropnet}\\
+  \caption{Dropout网络结构}\label{dropnet}
+\end{figure}
+对于Dropout的理解，我们知道，将不同的模型进行组合可以提高网络的性能，但是对于大型网络，训练不同的模型并进行组合代价是非常大的，因为对于每个模型，都需要寻找最优的超参数，需要训练很长时间。并且可能没有足够的训练数据去训练很多不同的模型。退一步讲，即使能够训练不同的网络，将模型用于测试阶段也是不合理的，因为测试阶段要求迅速的输出测试结果。Dropout能够避免上述的问题，Dropout可以视为不同的网络的组合，若去掉的比例为0.5，隐含层的神经元个数为n，那么就有$2^n$个稀疏网络，这些网络共享了参数，因此所有的参数为$O(n^2)$甚至更少，这就解脱了训练多个独立的不同神经网络的时耗问题。
+
+在测试阶段，不需要使用Dropout，网络的参数需要做scaled-down处理，如（\ref{dropscale}）所示，将参数乘以p，保证了在测试阶段的输出是训练阶段输出的期望。具体得，Dropout的公式如下:\\
+Without Dropout:
+\begin{equation}\label{Without Dropout}
+\begin{split}
+  z_i^{l+1} &= w_i^{l+1}y^l + b_i^{l+1}\\
+  y_i^{l+1} &= f(z_i^{l+1})
+\end{split}
+\end{equation}
+With Dropout:
+\begin{equation}\label{With Dropout}
+\begin{split}
+  r_j^j &\sim Bernoulli(p)\\
+  \hat{y}^l &= r^l * y^l\\
+  z_i^{l+1} &= w_i^{l+1}\hat{y}^l + b_i^{l+1}\\
+  y_i^{l+1} &= f(z_i^{l+1})\\
+  \end{split}
+\end{equation}
+\begin{figure}[H]
+  \centering
+  % Requires \usepackage{graphicx}
+  \includegraphics[width = 10cm]{dropscale}\\
+  \caption{测试阶段}\label{dropscale}
+\end{figure}
+\subsubsection{实验结果}
+为了比较Dropout对神经网络结果的影响，选取了MNIST和CIFAR10数据集，将数据统一成32*32大小，采用了VGG11网络，其结构如图（\ref{vgg11}）所示，比较了隐含层有无Dropout层的实验结果，实验中发现Dropout的概率p对结果有很大的影响，因此将Dropout的概率分别取p为[0,0.1,0.2,0.3,0.4,0.5,0.6,0.7]，其中0代表不使用Dropout，每次训练20个epoch，batch为64，得到的测试集误差以及测试集精确度的变化如图（\ref{best p mnist}）和图（\ref{best p cifar10}）所示。
+
+\begin{figure}
+  \centering
+  % Requires \usepackage{graphicx}
+  \includegraphics[width = 5cm]{vgg11}\\
+  \caption{VGG11结构}\label{vgg11}
+\end{figure}
+\begin{figure}[H]
+  \centering
+  % Requires \usepackage{graphicx}
+  \includegraphics[width = 18cm]{best_p_mnist.png}\\
+  \caption{MNIST数据集结果}\label{best p mnist}
+\end{figure}
+\begin{figure}[H]
+  \centering
+  % Requires \usepackage{graphicx}
+  \includegraphics[width = 18cm]{best_p_cifar10.png}\\
+  \caption{CIFAR10数据集结果}\label{best p cifar10}
+\end{figure}
+
+从上图可以看出，在使用Dropout后，随着p从0.1增大到0.7，测试集的误差先减小再上升，精确度先上升再逐渐减小，对于MNIST数据集来说，p的最佳取值为0.4，对于CIFAR10来说最佳取值为0.2，下表列出了采用Dropout前后的结果对比，可以看出当选择最佳Dropout概率后，实施Dropout能够提高准确率。
+\begin{table}[H]
+\centering
+\caption{Dropout结果对比}
+\begin{tabular}{cccccc}
+  \hline
+  % after \\: \hline or \cline{col1-col2} \cline{col3-col4} ...
+  & \multicolumn{2}{c}{Without Dropout} & \multicolumn{2}{c}{With Dropout} & acc 提高值\\
+  \hline
+   数据集 &loss& acc  &loss & acc  &\\
+   MNIST & 0.0428 &0.9877 &0.0549 &0.9881 & 0.001\\
+  CIFAR & 0.8738 & 0.8236 & 0.8574 &0.8574 & 0.034\\
+  \hline
+\end{tabular}
+\end{table}
+\subsection{Batch Normalization}
+\subsubsection{模型描述}
+神经网络学习过程本质就是为了学习数据分布，一旦训练数据与测试数据的分布不同，那么网络的泛化能力也大大降低；另外一方面，一旦每批训练数据的分布各不相同(batch 梯度下降)，那么网络就要在每次迭代都去学习适应不同的分布，这样将会大大降低网络的训练速度。Batch Normalization由Sergey Ioffe等人\cite{article3}提出，能够有效解决在训练过程中，中间层数据分布发生改变的问题。其主要思想是在每一次输入激活函数前插入一个归一化层，进行归一化处理，保证每层的输入数据分布是稳定的，从而达到加速训练的目的。
+
+首先，对于每一层的d维输入$x = (x^1,...,x^d)$，将其进行归一化，均值为0方差为1：
+\begin{equation}\label{normalization}
+  \hat{x} ^k = \frac{\hat{x} - E[x^k]}{\sqrt{Var[x^k]}}
+\end{equation}
+但是仅仅进行这一步不能够反映出每一层学习到的特征，会将学习到的信息损坏。比如，如果激活函数采用Sigmoid函数的话，那么上式就会强行把数据归一化，使得非线性特征变为线性特征，因此BN算法在第二步加入了两个学习参数$\gamma^k,\beta ^k$，这两个可学习的变量去还原上一层应该学到的数据分布：
+\begin{equation}
+y^k = \gamma ^k \hat{x}^k + \beta ^k
+\end{equation}
+通过上述方法处理，既能够使得每一层数据进行归一化处理，又能够保证每一层学习到的特征不丢失，从而加速了神经网络的训练，对于每个Batch，BN算法流程如图（\ref{bn_batch}）所示。在测试阶段，参数都是固定的，这时即使是每批训练样本进入网络，那么BN层计算的均值u、和标准差都是固定不变的。测试阶段的u和σ 计算公式如下：
+\begin{equation}
+  \begin{split}
+  E[x] & = E_{\mathcal{B}}[\mathcal{B}] \\
+  Var[x] & = \frac{m}{m-1} E_{\mathcal{B}}[\sigma _{\mathcal{B}}^2]
+  \end{split}
+\end{equation}
+\begin{figure}[H]
+  \centering
+  % Requires \usepackage{graphicx}
+  \includegraphics[width=8cm]{bn_batch}\\
+  \caption{Batch Normalization}\label{bn_batch}
+\end{figure}
+最终的到的BN算法的流程如下图所示：
+\begin{figure}[H]
+  \centering
+  % Requires \usepackage{graphicx}
+  \includegraphics[width=8cm]{BN}\\
+  \caption{Batch Normalization完整算法}\label{BN}
+\end{figure}
+
+\subsubsection{实验结果}
+论文\cite{article3}中提到加入BN层可以选择比较大的初始学习率，极大提高收敛速度。因此本次实验不仅对比了有无BN层的效果，还提高了学习率，分析在添加BN层的情况下学习率的提高是否能够显著的提高收敛速度。
+
+\textbf{MNIST数据集：}
+首先在MNIST数据集上进行实验，采用了LeNet和VGG11两种网络结构，初始学习率为0.001，分别比较了不加BN的原始模型，学习率为0.001的BN模型，提高5倍学习率即学习率为0.005的BN模型，提高30倍学习率即学习率为0.03的BN模型，将第一个epoch的测试集误差及精确度随训练次数的变化曲线画出，如图（\ref{LeNet_MNIST_result}）和图（\ref{VGG11_MNIST_result}）所示：
+\begin{figure}[H]
+  \centering
+  % Requires \usepackage{graphicx}
+  \includegraphics[width=18cm]{LeNet_MNIST_result}\\
+  \caption{LeNet模型在MNIST上的结果比较}\label{LeNet_MNIST_result}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  % Requires \usepackage{graphicx}
+  \includegraphics[width=18cm]{VGG11_MNIST_result}\\
+  \caption{VGG11模型在MNIST上的结果比较}\label{VGG11_MNIST_result}
+\end{figure}
+从上图可以看出，不论哪个模型，加入BN都能够加快模型的收敛，并且可以看出增大学习率能够进一步提高收敛速度。相对于结构比较简单的LeNet模型，VGG11更能够明显的看出在提高学习率之后，模型非常迅速的就达到了收敛状态。
+\ \\
+
+\textbf{CIFAR数据集：}在CIFAR数据集上尝试了更复杂的网络VGG19,仍然比较了不同学习率下的BN网络与原始模型的测试集误差与分类精确度，将第一个epoch的训练的结果画出，结果如图（\ref{VGG19_CIFAR10_result}）所示：
+
+\begin{figure}[H]
+  \centering
+  % Requires \usepackage{graphicx}
+  \includegraphics[width=18cm]{VGG19_CIFAR10_result}\\
+  \caption{VGG19模型在CIFAR10上的结果比较}\label{VGG19_CIFAR10_result}
+\end{figure}
+从上图可以非常明显的看出在训练完第一个epoch之后，原始模型还没有达到收敛状态，学习率为0.001的BN模型虽然也没有收敛，但是收敛速度明显比原始模型更快；将学习率提高5倍、30倍的BN模型均在第一个epoch就达到了收敛状态，另一方面提高30倍学习率的BN模型的误差要比提高5倍学习率的BN模型高一些，说明尽管能够通过提高学习率加速收敛，但是也并非无所上限。
+
+继续训练模型，表（\ref{acc_VGG19}）列出了所有模型精确度达到92\%所用的epoch个数，可以看出同样达到92\%的精确度，原始模型需要迭代20个epoch，但是0.001学习率的BN模型只需要12个epoch，提高学习率甚至只需要1个epoch，同时还能够达到更高的精确度，可见BN能够极大的加快收敛速度。
+\begin{table}[H]
+\centering
+\caption{模型精确度对比}
+\label{acc_VGG19}
+\begin{tabular}{ccc}
+  \hline
+  % after \\: \hline or \cline{col1-col2} \cline{col3-col4} ...
+  Model & Epoches to 92\%  & Accuracy \\
+  \hline
+  VGG19 & 20 & 92.18\% \\
+  BN-VGG19-0.001 & 12 & 93.02\% \\
+  BN-VGG19-0.005 & 1 & 97.49\% \\
+  BN-VGG19- 0.03 & 1 & 99.18\%  \\
+  \hline
+\end{tabular}
+\end{table}
+
+\subsection{几种正则化方法对比}
+论文中提到，BN模型可以代替过拟合中的drop out，也能够避免L2正则项参数的选择问题，采用BN算法后，可以移除这两项参数，或者可以选择更小的L2正则约束参数了，因为BN具有提高网络泛化能力的特性；因此本实验对比了几种正则化方法对模型结果的影响，即Batch Normalization,Dropout ,L1正则化，L2正则化，采用CIFAR10数据集，以及VGG11模型来进行实验，其中Dropout的置0概率根据图（\ref{best p cifar10}）中所示的结果取$p = 0.2$，L1、L2的正则化参数为0.001，迭代20个epoch，结果如图（\ref{differ_reg}）所示：
+\begin{figure}[H]
+  \centering
+  % Requires \usepackage{graphicx}
+  \includegraphics[width=10cm]{differ_reg}\\
+  \caption{不同正则化方法精确度随训练步数的变化}\label{differ_reg}
+\end{figure}
+表（\ref{differ_reg_table}）列出了不同模型迭代20个epoch之后的测试集误差即精度，可以看出所有正则化模型的误差都比基础模型有所降低，但是L1,L2正则化的精确度没有显著提高，这可能与正则化参数的设置有关，没有采用最佳的正则化参数，Dropout和BN都能够减小误差，提高测试准确度，但是结合图（\ref{differ_reg}）来看在所有的正则化方法中BN的表现最好，不仅能够提高准确度，还能够加快训练速度，提高模型的泛化能力。
+\begin{table}
+\centering
+\caption{不同正则化方法对比}
+\label{differ_reg_table}
+\begin{tabular}{ccc}
+  \hline
+  % after \\: \hline or \cline{col1-col2} \cline{col3-col4} ...
+  Model & loss & accuracy \\
+  \hline
+  Base & 0.9427 & 82.94\% \\
+  L1 & 0.8488 & 80.00\% \\
+  L2 & 0.8028 & 81.36\% \\
+  Dropout& 0.9082 & 82.94\% \\
+  BN & 0.8461 & 83.03 \% \\
+  \hline
+\end{tabular}
+\end{table}
+\renewcommand\refname{参考文献}
+\begin{thebibliography}{99}
+\bibitem{article1}Hinton G E, Srivastava N, Krizhevsky A, et al. Improving neural networks by preventing co-adaptation of feature detectors[J]. arXiv preprint arXiv:1207.0580, 2012.
+\bibitem{article2}Srivastava N, Hinton G, Krizhevsky A, et al. Dropout: a simple way to prevent neural networks from overfitting[J]. The Journal of Machine Learning Research, 2014, 15(1): 1929-1958.
+\bibitem{article3}Ioffe S, Szegedy C. Batch normalization: Accelerating deep network training by reducing internal covariate shift[J]. arXiv preprint arXiv:1502.03167, 2015.
+\end{thebibliography}
+%\renewcommand\refname{参考文献}
+%\bibliographystyle{plain}
+%\bibliography{papers}
+\end{document}
